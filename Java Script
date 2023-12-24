@@ -1,0 +1,72 @@
+<script>
+    document.getElementById("generate-button").addEventListener("click", function(e){
+        e.preventDefault();
+        
+        
+        var generateButton = document.getElementById("generate-button");
+        
+        if (generateButton.disabled) {
+            return; // Prevent multiple clicks while content is being generated
+        }
+        
+        generateButton.disabled = true;
+        
+        
+        
+        var topic = document.getElementById('topic').value;
+        var prompt = " 6 öğünlük diyet yaz " + topic;
+        var loading = document.getElementById('loading');
+        var result = document.getElementById('result');
+        var resultC = document.getElementById('result-container');
+
+        
+
+
+        
+
+        loading.style.display = 'block';
+        result.style.display = 'none'; // hide result textarea
+        resultC.style.display = 'none';
+        
+
+        var formData = new FormData();
+        formData.append('action', 'openai_generate_text');
+        formData.append('prompt', prompt);
+
+        fetch('/wp-admin/admin-ajax.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            loading.style.display = 'none';
+            if(data.success) {
+                result.value = data.data.choices[0].message.content; 
+                result.style.display = 'block'; // show result textarea
+                resultC.style.display = 'block';
+                generateButton.disabled = false;
+            } else {
+                result.value = 'An error occurred: ' + data.data;
+                result.style.display = 'block'; // show result textarea
+                resultC.style.display = 'block';
+                generateButton.disabled = false;
+            }
+        })
+        .catch(error => {
+            loading.style.display = 'none';
+            result.value = 'An error occurred: ' + error.message;
+            result.style.display = 'block'; // show result textarea
+            resultC.style.display = 'block';
+            generateButton.disabled = false;
+            
+        });
+    });
+    
+    var copyButton = document.getElementById('copy-button');
+    copyButton.addEventListener('click', function() {
+        var result = document.getElementById('result');
+        result.select();
+        document.execCommand('copy');
+        alert('Copied to clipboard!');
+    });
+</script>

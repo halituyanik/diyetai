@@ -1,0 +1,112 @@
+$diyet = ""; // Başlangıçta boş
+if (isset($_POST['olustur'])) {
+    $yas = $_POST['yas'];
+    $boy = $_POST['boy'];
+    $kilo = $_POST['kilo'];
+    $cinsiyet = $_POST['cinsiyet'];
+    $kronik_hastalik = $_POST['kronik_hastalik']; // Yeni eklenen alan
+    $hedef_kilo = $_POST['hedef_kilo'];
+    $hedef_sure = $_POST['hedef_sure'];
+
+    // Kronik hastalık ile prompt oluştur
+    $prompt = "Yaş: $yas, Boy: $boy cm, Kilo: $kilo kg, Cinsiyet: $cinsiyet, Kronik Hastalık: $kronik_hastalik, Hedef Kilo: $hedef_kilo kg, Hedef Süre: $hedef_sure hafta. Bu bilgilere göre kişiselleştirilmiş bir diyet planı oluştur.";
+
+    // API isteği için veri yapısı
+    $api_key = "xai-G3JPDGFzEWInh2BL8AtEWPKE3dt8ZzIZVyss2LHU3gfLcZ5FRs2Twa5FY0SsaHui2N94JctZlbvkegpO";
+    $url = "https://api.x.ai/v1/chat/completions";
+
+    $data = [
+        "messages" => [
+            [
+                "role" => "system",
+                "content" => "You are a diet assistant."
+            ],
+            [
+                "role" => "user",
+                "content" => $prompt
+            ]
+        ],
+        "model" => "grok-2-latest",
+        "stream" => false,
+        "temperature" => 0
+    ];
+
+    // cURL ile isteği gönder
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Content-Type: application/json",
+        "Authorization: Bearer $api_key"
+    ]);
+
+    $response = curl_exec($ch);
+    if ($response === false) {
+        $diyet = "API hatası: " . curl_error($ch);
+    } else {
+        $result = json_decode($response, true);
+        $diyet = $result['choices'][0]['message']['content'] ?? "Diyet oluşturulamadı, lütfen tekrar deneyin.";
+    }
+    curl_close($ch);
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diyet Oluştur</title>
+    <style>
+        .form-container { max-width: 500px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; }
+        input, select { width: 100%; padding: 8px; }
+        button { padding: 10px 20px; background-color: #8A6A57; color: white; border: none; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2 style="font-family: 'Rosarivo', serif;" >Sana Özel Diyet Oluştur</h2>
+        <form method="POST" action="">
+            <div class="form-group">
+                <label for="yas">Yaş:</label>
+                <input type="number" id="yas" name="yas" value="<?php echo isset($_POST['yas']) ? $_POST['yas'] : ''; ?>" required>
+            </div>
+            <div class="form-group">
+                <label for="boy">Boy (cm):</label>
+                <input type="number" id="boy" name="boy" value="<?php echo isset($_POST['boy']) ? $_POST['boy'] : ''; ?>" required>
+            </div>
+            <div class="form-group">
+                <label for="kilo">Kilo (kg):</label>
+                <input type="number" id="kilo" name="kilo" value="<?php echo isset($_POST['kilo']) ? $_POST['kilo'] : ''; ?>" required>
+            </div>
+            <div class="form-group">
+                <label for="cinsiyet">Cinsiyet:</label>
+                <select id="cinsiyet" name="cinsiyet" required>
+                    <option value="Erkek" <?php echo (isset($_POST['cinsiyet']) && $_POST['cinsiyet'] == 'Erkek') ? 'selected' : ''; ?>>Erkek</option>
+                    <option value="Kadın" <?php echo (isset($_POST['cinsiyet']) && $_POST['cinsiyet'] == 'Kadın') ? 'selected' : ''; ?>>Kadın</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="kronik_hastalik">Kronik Hastalığınız (Yoksa 'yok' yazın):</label>
+                <input type="text" id="kronik_hastalik" name="kronik_hastalik" value="<?php echo isset($_POST['kronik_hastalik']) ? $_POST['kronik_hastalik'] : ''; ?>" required>
+            </div>
+            <div class="form-group">
+                <label for="hedef_kilo">Hedef Kilo (kg):</label>
+                <input type="number" id="hedef_kilo" name="hedef_kilo" value="<?php echo isset($_POST['hedef_kilo']) ? $_POST['hedef_kilo'] : ''; ?>" required>
+            </div>
+            <div class="form-group">
+                <label for="hedef_sure">Hedef Süre (hafta):</label>
+                <input type="number" id="hedef_sure" name="hedef_sure" value="<?php echo isset($_POST['hedef_sure']) ? $_POST['hedef_sure'] : ''; ?>" required>
+            </div>
+			<form style="text-align: center;">
+            <button type="submit" name="olustur">Oluştur</button>
+        </form>
+
+        <?php if (!empty($diyet)): ?>
+            <h3>Oluşturulan Diyet:</h3>
+            <p><?php echo nl2br(htmlspecialchars($diyet)); ?></p>
+        <?php endif; ?>
+    </div>
+</body>
+</html>
